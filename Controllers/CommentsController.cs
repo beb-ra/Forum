@@ -80,7 +80,27 @@ namespace ForumWebAPI.Controllers
         public ActionResult<IEnumerable<Comment>> Get()
         {
             var comments = _commentRepository.Get();
-            return Ok(comments);
+
+            var repliesStats = comments
+                .Where(c => c.ParentCommentId != null)
+                .GroupBy(c => c.ParentCommentId!.Value)
+                .ToDictionary(g => g.Key,
+                g => new { Count = g.Count(), TotalRating = g.Sum(c => c.Rating) });
+
+            var result = comments
+                .OrderByDescending(c =>
+                {
+                    var stats = repliesStats.GetValueOrDefault(c.CommentId);
+                    return Comment.CalculateScore(
+                        c.Rating,
+                        stats?.Count ?? 0,
+                        stats?.TotalRating ?? 0,
+                        c.CreationDate,
+                        c.IsDeleted);
+                })
+                .ToList();
+
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetComment")]

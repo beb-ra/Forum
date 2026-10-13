@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Microsoft.Extensions.Hosting;
 
 namespace ForumWebAPI.Model
 {
@@ -26,5 +27,19 @@ namespace ForumWebAPI.Model
         public ICollection<Comment> Comments { get; set; } = new List<Comment>();
         [JsonIgnore]
         public ICollection<Vote> Votes { get; set; } = new List<Vote>();
+
+        public static double CalculateScore(int rating, int commentCount, DateTime creationDate, bool isClosed)
+        {
+            var order = Math.Log10(Math.Max(Math.Abs(rating), 1));
+
+            var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            var seconds = (creationDate.ToUniversalTime() - epoch).TotalSeconds;
+
+            var commentBonus = Math.Log10(commentCount + 1) * 1.2;
+
+            var closedBonus = isClosed ? -10 : 0;
+
+            return order + seconds / 45000.0 + commentBonus + closedBonus;
+        }
     }
 }

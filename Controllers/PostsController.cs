@@ -21,11 +21,14 @@ namespace ForumWebAPI.Controllers
     {
         private readonly ISoftDeleteRepository<Post> _postRepository;
         private readonly IBanService _banService;
+        private readonly IRepository<Comment> _commentRepository;
 
-        public PostsController(ISoftDeleteRepository<Post> postRepository, IBanService banService)
+        public PostsController(ISoftDeleteRepository<Post> postRepository, 
+            IBanService banService, IRepository<Comment> commentRepository)
         {
             _postRepository = postRepository;
             _banService = banService;
+            _commentRepository = commentRepository;
         }
 
         [HttpPost]
@@ -75,7 +78,19 @@ namespace ForumWebAPI.Controllers
         public ActionResult<IEnumerable<Post>> Get()
         {
             var posts = _postRepository.Get();
-            return Ok(posts);
+
+            var commentsByPost = _commentRepository.Get()
+                .Where(c => !c.IsDeleted)
+                .GroupBy(c => c.PostId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var result = posts.OrderByDescending(p => Post.CalculateScore(
+                p.Rating,
+                commentsByPost.GetValueOrDefault(p.PostId, 0),
+                p.CreationDate, 
+                p.IsClosed)).ToList();
+
+            return Ok(result);
         }
 
         [HttpGet("{id}", Name = "GetPost")]
