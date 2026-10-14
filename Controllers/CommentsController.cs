@@ -61,6 +61,7 @@ namespace ForumWebAPI.Controllers
             comment.CreationDate = DateTime.UtcNow;
             comment.Rating = 0;
             comment.IsDeleted = false;
+            comment.IsPinned = false;
 
             try
             {
@@ -96,7 +97,8 @@ namespace ForumWebAPI.Controllers
                         stats?.Count ?? 0,
                         stats?.TotalRating ?? 0,
                         c.CreationDate,
-                        c.IsDeleted);
+                        c.IsDeleted,
+                        c.IsPinned);
                 })
                 .ToList();
 
@@ -145,6 +147,7 @@ namespace ForumWebAPI.Controllers
             if (!isAuthor && !isModerator) return Forbid();
 
             if (!string.IsNullOrEmpty(updatedComment.Content?.Trim())) { comment.Content = updatedComment.Content.Trim(); }
+            comment.IsPinned = updatedComment.IsPinned;
 
             _commentRepository.Update(Id, comment);
             return NoContent();

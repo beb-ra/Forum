@@ -65,7 +65,10 @@ namespace ForumWebAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("bans", (string)null);
+                    b.ToTable("bans", null, t =>
+                        {
+                            t.HasCheckConstraint("chk_bans_expires_date", "expires_date IS NULL OR expires_date > banned_date");
+                        });
                 });
 
             modelBuilder.Entity("ForumWebAPI.Model.Comment", b =>
@@ -97,6 +100,12 @@ namespace ForumWebAPI.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false)
                         .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_pinned");
 
                     b.Property<int?>("ParentCommentId")
                         .HasColumnType("integer")

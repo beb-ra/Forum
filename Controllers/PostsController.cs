@@ -88,7 +88,8 @@ namespace ForumWebAPI.Controllers
                 p.Rating,
                 commentsByPost.GetValueOrDefault(p.PostId, 0),
                 p.CreationDate, 
-                p.IsClosed)).ToList();
+                p.IsClosed,
+                p.IsPinned)).ToList();
 
             return Ok(result);
         }
@@ -136,6 +137,8 @@ namespace ForumWebAPI.Controllers
             if (!string.IsNullOrEmpty(updatedPost.Title?.Trim())) { post.Title = updatedPost.Title.Trim(); }
             if (!string.IsNullOrEmpty(updatedPost.Content?.Trim())) { post.Content = updatedPost.Content.Trim(); }
             if (updatedPost.TagId != null) { post.TagId = updatedPost.TagId; }
+            post.IsPinned = updatedPost.IsPinned;
+            post.IsClosed = updatedPost.IsClosed;
 
             _postRepository.Update(Id, post);
             return NoContent();

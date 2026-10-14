@@ -12,6 +12,7 @@ namespace ForumWebAPI.Model
         public int? ParentCommentId { get; set; }
         public bool IsDeleted { get; set; }
         public int Rating { get; set; }
+        public bool IsPinned { get; set; }
 
         [JsonIgnore]
         public User Author { get; set; } = null!;
@@ -25,7 +26,7 @@ namespace ForumWebAPI.Model
         public ICollection<Vote> Votes { get; set; } = new List<Vote>();
 
         public static double CalculateScore(int commentRating, int replyCount, 
-            int totalRepliesRating, DateTime creationDate, bool isDeleted)
+            int totalRepliesRating, DateTime creationDate, bool isDeleted, bool isPinned)
         {
             var order = Math.Log10(Math.Max(Math.Abs(commentRating), 1));
 
@@ -38,7 +39,9 @@ namespace ForumWebAPI.Model
 
             var deletedBonus = isDeleted ? -5 : 0;
 
-            return order + seconds / 45000.0 + replyBonus + discussionBonus + deletedBonus;
+            var pinnedBonus = isPinned ? 100000 : 0;
+
+            return order + seconds / 45000.0 + replyBonus + discussionBonus + deletedBonus + pinnedBonus;
         }
     }
 }

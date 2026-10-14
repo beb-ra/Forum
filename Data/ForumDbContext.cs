@@ -103,6 +103,7 @@ public class ForumDbContext : DbContext
             e.Property(x => x.ParentCommentId).HasColumnName("parent_comment_id");
             e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
             e.Property(x => x.Rating).HasColumnName("rating").HasDefaultValue(0);
+            e.Property(x => x.IsPinned).HasColumnName("is_pinned").HasDefaultValue(false);
 
             e.HasOne(x => x.Author).WithMany(u => u.Comments)
                 .HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);

@@ -28,7 +28,7 @@ namespace ForumWebAPI.Model
         [JsonIgnore]
         public ICollection<Vote> Votes { get; set; } = new List<Vote>();
 
-        public static double CalculateScore(int rating, int commentCount, DateTime creationDate, bool isClosed)
+        public static double CalculateScore(int rating, int commentCount, DateTime creationDate, bool isClosed, bool isPinned)
         {
             var order = Math.Log10(Math.Max(Math.Abs(rating), 1));
 
@@ -39,7 +39,9 @@ namespace ForumWebAPI.Model
 
             var closedBonus = isClosed ? -10 : 0;
 
-            return order + seconds / 45000.0 + commentBonus + closedBonus;
+            var pinnedBonus = isPinned ? 100000 : 0;
+
+            return order + seconds / 45000.0 + commentBonus + closedBonus + pinnedBonus;
         }
     }
 }
