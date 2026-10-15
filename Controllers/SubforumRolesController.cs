@@ -111,6 +111,15 @@ namespace ForumWebAPI.Controllers
                 return NotFound();
             }
 
+            var roleEntity = _roleRepository.Get(updatedRole.RoleId);
+            if (roleEntity == null) return NotFound("Role not found.");
+
+            if (roleEntity.RoleName == "Admin" && role.SubforumId != null)
+                return BadRequest("Admin role must be global (subforumId = null)");
+
+            if (roleEntity.RoleName == "Moderator" && role.SubforumId == null)
+                return BadRequest("Moderator role must be assigned to a specific subforum");
+
             role.RoleId = updatedRole.RoleId;
             role.SubforumId = updatedRole.SubforumId;
             role.AssignedAt = DateTime.UtcNow;
@@ -121,7 +130,7 @@ namespace ForumWebAPI.Controllers
             }
             catch (DbUpdateException)
             {
-                return BadRequest("The role is uncorrect");
+                return BadRequest("The role is incorrect");
             }
             return NoContent();
         }
