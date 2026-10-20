@@ -10,6 +10,7 @@ using ForumWebAPI.Model;
 using ForumWebAPI.Data.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using ForumWebAPI.Extensions;
+using System.ComponentModel.DataAnnotations;
 
 namespace ForumWebAPI.Controllers
 {
@@ -89,30 +90,6 @@ namespace ForumWebAPI.Controllers
                 user.RegistrationDate });
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Update(int Id, [FromBody] User updatedUser)
-        {
-            if (updatedUser == null)
-            {
-                return BadRequest();
-            }
-
-            var currentUserId = User.GetUserId();
-            if (currentUserId != Id && !User.IsGlobalAdmin()) return Forbid();
-
-            var user = _userRepository.Get(Id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-
-            if (updatedUser.Username != null) { user.Username = updatedUser.Username; }
-            if (updatedUser.Email != null) { user.Email = updatedUser.Email; }
-
-            _userRepository.Update(Id, user);
-            return NoContent();
-        }
-
         [HttpDelete("{id}")]
         public IActionResult Delete(int Id)
         {
@@ -127,6 +104,71 @@ namespace ForumWebAPI.Controllers
             }
 
             return Ok(deletedUser);
+        }
+
+        public class ChangeEmailRequest
+        {
+            [Required]
+            public string CurrentPassword { get; set; } = "";
+
+            [Required]
+            [EmailAddress(ErrorMessage = "Uncorrect email")]
+            public string NewEmail { get; set; } = "";
+        }
+
+        public class ChangePasswordRequest
+        {
+            [Required]
+            public string CurrentPassword { get; set; } = "";
+
+            [Required]
+            public string NewPassword { get; set; } = "";
+        }
+
+        [HttpPut("me/email")]
+        public IActionResult ChangeEmail([FromBody] ChangeEmailRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewEmail))
+                return BadRequest("Email and current password are required");
+
+            var userId = User.GetUserId();
+            var user = _userRepository.Get(userId);
+            if (user == null) return NotFound();
+
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash);
+            if (!isPasswordValid)
+                return BadRequest("Invalid password");
+
+            var newEmail = request.NewEmail.Trim().ToLower();
+
+            var existing = _userRepository.Get().FirstOrDefault(u => u.Email.ToLower() == newEmail);
+            if (existing != null && existing.UserId != userId)
+                return Conflict();
+
+            user.Email = newEmail;
+            _userRepository.Update(userId, user);
+
+            return NoContent();
+        }
+
+        [HttpPut("me/password")]
+        public IActionResult ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequest("Current and new passwords are required");
+
+            var userId = User.GetUserId();
+            var user = _userRepository.Get(userId);
+            if (user == null) return NotFound();
+
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash);
+            if (!isPasswordValid)
+                return BadRequest("Invalid password");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            _userRepository.Update(userId, user);
+
+            return NoContent();
         }
     }
 }

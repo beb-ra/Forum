@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.ComponentModel.DataAnnotations;
 
 namespace ForumWebAPI.Controllers
 {
@@ -32,14 +33,20 @@ namespace ForumWebAPI.Controllers
 
         public class RegisterRequest
         {
+            [Required]
             public string Username { get; set; } = "";
+            [Required]
+            [EmailAddress(ErrorMessage = "Uncorrect email")]
             public string Email { get; set; } = "";
+            [Required]
             public string Password { get; set; } = "";
         }
 
         public class LoginRequest
         {
+            [Required]
             public string Email { get; set; } = "";
+            [Required]
             public string Password { get; set; } = "";
         }
 
