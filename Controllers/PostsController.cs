@@ -11,6 +11,7 @@ using ForumWebAPI.Data.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using ForumWebAPI.Extensions;
 using ForumWebAPI.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace ForumWebAPI.Controllers
 {
@@ -72,26 +73,32 @@ namespace ForumWebAPI.Controllers
             return CreatedAtRoute("GetPost", new { id = post.PostId }, post);
         }
 
-
         [HttpGet(Name = "GetAllPosts")]
         [AllowAnonymous]
-        public ActionResult<IEnumerable<Post>> Get()
+        public ActionResult<PageResult<Post>> Get(int page = 1, int pageSize = 10, int? subforumId = null)
         {
-            var posts = _postRepository.Get();
+            var query = _postRepository.Get().Where(p => !p.IsDeleted);
+
+            if (subforumId.HasValue)
+            {
+                query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
+
+            var total = query.Count();
 
             var commentsByPost = _commentRepository.Get()
-                .Where(c => !c.IsDeleted)
-                .GroupBy(c => c.PostId)
-                .ToDictionary(g => g.Key, g => g.Count());
+               .Where(c => !c.IsDeleted)
+               .GroupBy(c => c.PostId)
+               .ToDictionary(g => g.Key, g => g.Count());
 
-            var result = posts.OrderByDescending(p => Post.CalculateScore(
+            var result = query.OrderByDescending(p => Post.CalculateScore(
                 p.Rating,
                 commentsByPost.GetValueOrDefault(p.PostId, 0),
-                p.CreationDate, 
+                p.CreationDate,
                 p.IsClosed,
                 p.IsPinned)).ToList();
 
-            return Ok(result);
+            return Ok(new PageResult<Post> { Items = result, TotalCount = total });
         }
 
         [HttpGet("{id}", Name = "GetPost")]

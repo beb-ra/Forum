@@ -75,34 +75,60 @@ namespace ForumWebAPI.Controllers
             return CreatedAtRoute("GetComment", new { id = comment.CommentId }, comment);
         }
 
-
         [HttpGet(Name = "GetAllComments")]
         [AllowAnonymous]
-        public ActionResult<IEnumerable<Comment>> Get()
+        public ActionResult<PageResult<CommentDto>> Get(int postId, int? parentCommentId = null, int page = 1, int pageSize = 10)
         {
-            var comments = _commentRepository.Get();
-
-            var repliesStats = comments
-                .Where(c => c.ParentCommentId != null)
-                .GroupBy(c => c.ParentCommentId!.Value)
-                .ToDictionary(g => g.Key,
-                g => new { Count = g.Count(), TotalRating = g.Sum(c => c.Rating) });
-
-            var result = comments
-                .OrderByDescending(c =>
-                {
-                    var stats = repliesStats.GetValueOrDefault(c.CommentId);
-                    return Comment.CalculateScore(
-                        c.Rating,
-                        stats?.Count ?? 0,
-                        stats?.TotalRating ?? 0,
-                        c.CreationDate,
-                        c.IsDeleted,
-                        c.IsPinned);
-                })
+            var allCommentsForPost = _commentRepository.Get()
+                .Where(c => c.PostId == postId)
                 .ToList();
 
-            return Ok(result);
+            var repliesStats = allCommentsForPost
+                .Where(c => c.ParentCommentId != null && !c.IsDeleted)
+                .GroupBy(c => c.ParentCommentId!.Value)
+                .ToDictionary(g => g.Key, g => new { Count = g.Count(), TotalRating = g.Sum(c => c.Rating) });
+
+            double GetScore(Comment c)
+            {
+                var stats = repliesStats.GetValueOrDefault(c.CommentId);
+                return Comment.CalculateScore(
+                    c.Rating,
+                    stats?.Count ?? 0,
+                    stats?.TotalRating ?? 0,
+                    c.CreationDate, c.IsDeleted, c.IsPinned);
+            }
+
+            var result = allCommentsForPost
+                .Where(c => c.ParentCommentId == parentCommentId)
+                .Where(c => !c.IsDeleted || repliesStats.ContainsKey(c.CommentId))
+                .OrderByDescending(GetScore)
+                .ToList();
+
+            var pageItems = parentCommentId.HasValue
+                ? result
+                : result.Skip((page - 1) * pageSize).Take(pageSize);
+
+            CommentDto Map(Comment c)
+            {
+                return new CommentDto
+                {
+                    CommentId = c.CommentId,
+                    PostId = c.PostId,
+                    AuthorId = c.AuthorId,
+                    Content = c.Content,
+                    CreationDate = c.CreationDate,
+                    Rating = c.Rating,
+                    IsDeleted = c.IsDeleted,
+                    IsPinned = c.IsPinned,
+                    HasReplies = repliesStats.ContainsKey(c.CommentId)
+                };
+            }
+
+            return Ok(new PageResult<CommentDto>
+            {
+                Items = pageItems.Select(Map).ToList(),
+                TotalCount = result.Count
+            });
         }
 
         [HttpGet("{id}", Name = "GetComment")]
@@ -173,6 +199,19 @@ namespace ForumWebAPI.Controllers
 
             _commentRepository.Delete(Id);
             return NoContent();
+        }
+
+        public class CommentDto
+        {
+            public int CommentId { get; set; }
+            public int PostId { get; set; }
+            public int AuthorId { get; set; }
+            public string Content { get; set; } = "";
+            public DateTime CreationDate { get; set; }
+            public int Rating { get; set; }
+            public bool IsDeleted { get; set; }
+            public bool IsPinned { get; set; }
+            public bool HasReplies { get; set; }
         }
     }
 }
