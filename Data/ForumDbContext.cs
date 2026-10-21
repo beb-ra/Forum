@@ -203,5 +203,19 @@ public class ForumDbContext : DbContext
             e.HasIndex(x => x.UserId);
             e.HasIndex(x => x.SubforumId);
         });
+
+        mb.Entity<PostImage>(e =>
+        {
+            e.ToTable("post_images");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.ImageUrl).HasColumnName("image_url").IsRequired();
+            e.Property(x => x.PostId).HasColumnName("post_id").IsRequired();
+
+            e.HasOne(x => x.Post)
+             .WithMany(p => p.Images)
+             .HasForeignKey(x => x.PostId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

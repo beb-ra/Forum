@@ -86,6 +86,7 @@ namespace ForumWebAPI.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_bans", x => x.ban_id);
+                    table.CheckConstraint("chk_bans_expires_date", "expires_date IS NULL OR expires_date > banned_date");
                     table.ForeignKey(
                         name: "FK_bans_subforums_subforum_id",
                         column: x => x.subforum_id,
@@ -192,7 +193,9 @@ namespace ForumWebAPI.Migrations
                     post_id = table.Column<int>(type: "integer", nullable: false),
                     parent_comment_id = table.Column<int>(type: "integer", nullable: true),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    rating = table.Column<int>(type: "integer", nullable: false, defaultValue: 0)
+                    rating = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    is_pinned = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    image_url = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -215,6 +218,26 @@ namespace ForumWebAPI.Migrations
                         principalTable: "users",
                         principalColumn: "user_id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "post_images",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    image_url = table.Column<string>(type: "text", nullable: false),
+                    post_id = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_post_images", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_post_images_posts_post_id",
+                        column: x => x.post_id,
+                        principalTable: "posts",
+                        principalColumn: "post_id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -282,6 +305,11 @@ namespace ForumWebAPI.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_comments_post_id",
                 table: "comments",
+                column: "post_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_post_images_post_id",
+                table: "post_images",
                 column: "post_id");
 
             migrationBuilder.CreateIndex(
@@ -366,6 +394,9 @@ namespace ForumWebAPI.Migrations
         {
             migrationBuilder.DropTable(
                 name: "bans");
+
+            migrationBuilder.DropTable(
+                name: "post_images");
 
             migrationBuilder.DropTable(
                 name: "subforum_roles");

@@ -51,10 +51,10 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("FrontendPolicy", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyMethod() 
+        policy.WithOrigins("https://beb-ra.github.io")
+              .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
     });
@@ -76,7 +76,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("FrontendPolicy");
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 
