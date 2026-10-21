@@ -16,6 +16,7 @@ namespace ForumWebAPI.Model
         public bool IsPinned { get; set; }
         public bool IsClosed { get; set; }
         public bool IsDeleted { get; set; }
+        public ICollection<PostImage> Images { get; set; } = new List<PostImage>();
 
         [JsonIgnore]
         public Subforum Subforum { get; set; } = null!;

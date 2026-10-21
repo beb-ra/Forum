@@ -62,6 +62,7 @@ namespace ForumWebAPI.Controllers
             comment.Rating = 0;
             comment.IsDeleted = false;
             comment.IsPinned = false;
+            comment.ImageUrl = comment.ImageUrl?.Trim();
 
             try
             {
@@ -120,7 +121,8 @@ namespace ForumWebAPI.Controllers
                     Rating = c.Rating,
                     IsDeleted = c.IsDeleted,
                     IsPinned = c.IsPinned,
-                    HasReplies = repliesStats.ContainsKey(c.CommentId)
+                    HasReplies = repliesStats.ContainsKey(c.CommentId),
+                    ImageUrl = c.ImageUrl
                 };
             }
 
@@ -212,6 +214,7 @@ namespace ForumWebAPI.Controllers
             public bool IsDeleted { get; set; }
             public bool IsPinned { get; set; }
             public bool HasReplies { get; set; }
+            public string? ImageUrl { get; set; }
         }
     }
 }

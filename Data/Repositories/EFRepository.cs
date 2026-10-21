@@ -20,9 +20,9 @@ namespace ForumWebAPI.Data.Repositories
             return item;
         }
 
-        public IEnumerable<T> Get()
+        public IQueryable<T> Get()
         {
-            return _context.Set<T>().ToList();
+            return _context.Set<T>();
         }
 
         public T? Get(int id)

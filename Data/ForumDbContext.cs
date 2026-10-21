@@ -19,6 +19,7 @@ public class ForumDbContext : DbContext
     public DbSet<Vote> Votes => Set<Vote>();
     public DbSet<Ban> Bans => Set<Ban>();
     public DbSet<SubforumRole> SubforumRoles => Set<SubforumRole>();
+    public DbSet<PostImage> PostImages => Set<PostImage>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -89,6 +90,10 @@ public class ForumDbContext : DbContext
             e.HasIndex(x => x.SubforumId);
             e.HasIndex(x => x.AuthorId);
             e.HasIndex(x => x.TagId);
+            e.HasMany(p => p.Images)
+            .WithOne(i => i.Post)
+            .HasForeignKey(i => i.PostId)
+            .OnDelete(DeleteBehavior.Cascade);
         });
 
         mb.Entity<Comment>(e =>
@@ -104,6 +109,7 @@ public class ForumDbContext : DbContext
             e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
             e.Property(x => x.Rating).HasColumnName("rating").HasDefaultValue(0);
             e.Property(x => x.IsPinned).HasColumnName("is_pinned").HasDefaultValue(false);
+            e.Property(x => x.ImageUrl).HasColumnName("image_url");
 
             e.HasOne(x => x.Author).WithMany(u => u.Comments)
                 .HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);

@@ -25,6 +25,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(EFRepository<>));
 builder.Services.AddScoped(typeof(ISoftDeleteRepository<>), typeof(EFSoftDeleteRepository<>));
 builder.Services.AddScoped(typeof(IHardDeleteRepository<>), typeof(EFHardDeleteRepository<>));
 builder.Services.AddScoped<IBanService, BanService>();
+builder.Services.AddScoped<IImageService, ImageService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

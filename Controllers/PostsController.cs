@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Authorization;
 using ForumWebAPI.Extensions;
 using ForumWebAPI.Services;
 using Microsoft.Extensions.Hosting;
+using Azure.Core;
+using System.ComponentModel.DataAnnotations;
 
 namespace ForumWebAPI.Controllers
 {
@@ -23,43 +25,68 @@ namespace ForumWebAPI.Controllers
         private readonly ISoftDeleteRepository<Post> _postRepository;
         private readonly IBanService _banService;
         private readonly IRepository<Comment> _commentRepository;
+        private readonly IRepository<Subforum> _subforumRepository;
 
         public PostsController(ISoftDeleteRepository<Post> postRepository, 
-            IBanService banService, IRepository<Comment> commentRepository)
+            IBanService banService, IRepository<Comment> commentRepository, 
+            IRepository<Subforum> subforumRepository)
         {
             _postRepository = postRepository;
             _banService = banService;
             _commentRepository = commentRepository;
+            _subforumRepository = subforumRepository;
+        }
+
+        public class CreatePostRequest
+        {
+            [Required]
+            public int SubforumId { get; set; }
+            [Required]
+            public string Title { get; set; } = string.Empty;
+            [Required]
+            public string Content { get; set; } = string.Empty;
+            public List<string> ImageUrls { get; set; } = new();
         }
 
         [HttpPost]
-        public IActionResult Create([FromBody] Post post)
+        public IActionResult Create([FromBody] CreatePostRequest request)
         {
-            if (post == null)
+            if (request == null)
             {
                 return BadRequest();
             }
 
-            if (_banService.IsBanned(User.GetUserId(), post.SubforumId))
+            if (_banService.IsBanned(User.GetUserId(), request.SubforumId))
             {
-                return StatusCode(403, "You are banned in this subforum.");
+                return StatusCode(403, "You are banned in this subforum");
             }
 
-            if (string.IsNullOrEmpty(post.Title?.Trim()) || string.IsNullOrEmpty(post.Content?.Trim()))
+            var subforum = _subforumRepository.Get(request.SubforumId);
+            if (subforum == null) return NotFound("Subforum not found");
+
+            var post = new Post
             {
-                return BadRequest("Title and Content are required");
+                SubforumId = request.SubforumId,
+                Title = request.Title.Trim(),
+                Content = request.Content.Trim(),
+                AuthorId = User.GetUserId(),
+                CreationDate = DateTime.UtcNow,
+                Rating = 0,
+                IsPinned = false,
+                IsClosed = false,
+                IsDeleted = false
+            };
+
+            if (request.ImageUrls != null)
+            {
+                foreach (var url in request.ImageUrls)
+                {
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        post.Images.Add(new PostImage { ImageUrl = url.Trim() });
+                    }
+                }
             }
-
-            post.AuthorId = User.GetUserId();
-
-            post.Title = post.Title.Trim();
-            post.Content = post.Content.Trim();
-
-            post.CreationDate = DateTime.UtcNow;
-            post.Rating = 0;
-            post.IsPinned = false;
-            post.IsClosed = false;
-            post.IsDeleted = false;
 
             try
             {
@@ -77,7 +104,9 @@ namespace ForumWebAPI.Controllers
         [AllowAnonymous]
         public ActionResult<PageResult<Post>> Get(int page = 1, int pageSize = 10, int? subforumId = null)
         {
-            var query = _postRepository.Get().Where(p => !p.IsDeleted);
+            var query = _postRepository.Get()
+                .Include(p => p.Images)
+                .Where(p => !p.IsDeleted);
 
             if (subforumId.HasValue)
             {
@@ -91,12 +120,17 @@ namespace ForumWebAPI.Controllers
                .GroupBy(c => c.PostId)
                .ToDictionary(g => g.Key, g => g.Count());
 
-            var result = query.OrderByDescending(p => Post.CalculateScore(
+            var allPosts = query.ToList();
+
+            var result = allPosts.OrderByDescending(p => Post.CalculateScore(
                 p.Rating,
                 commentsByPost.GetValueOrDefault(p.PostId, 0),
                 p.CreationDate,
                 p.IsClosed,
-                p.IsPinned)).ToList();
+                p.IsPinned))
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             return Ok(new PageResult<Post> { Items = result, TotalCount = total });
         }

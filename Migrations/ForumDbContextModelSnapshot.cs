@@ -95,6 +95,10 @@ namespace ForumWebAPI.Migrations
                         .HasColumnName("creation_date")
                         .HasDefaultValueSql("NOW()");
 
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("image_url");
+
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -203,6 +207,28 @@ namespace ForumWebAPI.Migrations
                     b.HasIndex("TagId");
 
                     b.ToTable("posts", (string)null);
+                });
+
+            modelBuilder.Entity("ForumWebAPI.Model.PostImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("PostImages");
                 });
 
             modelBuilder.Entity("ForumWebAPI.Model.Role", b =>
@@ -497,6 +523,17 @@ namespace ForumWebAPI.Migrations
                     b.Navigation("Tag");
                 });
 
+            modelBuilder.Entity("ForumWebAPI.Model.PostImage", b =>
+                {
+                    b.HasOne("ForumWebAPI.Model.Post", "Post")
+                        .WithMany("Images")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("ForumWebAPI.Model.SubforumRole", b =>
                 {
                     b.HasOne("ForumWebAPI.Model.Role", "Role")
@@ -558,6 +595,8 @@ namespace ForumWebAPI.Migrations
             modelBuilder.Entity("ForumWebAPI.Model.Post", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Images");
 
                     b.Navigation("Votes");
                 });

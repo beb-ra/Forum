@@ -13,6 +13,7 @@ namespace ForumWebAPI.Model
         public bool IsDeleted { get; set; }
         public int Rating { get; set; }
         public bool IsPinned { get; set; }
+        public string? ImageUrl { get; set; }
 
         [JsonIgnore]
         public User Author { get; set; } = null!;
