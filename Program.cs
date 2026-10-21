@@ -62,13 +62,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseCors("AllowFrontend");
-
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ForumDbContext>();
     dbContext.Database.Migrate();
 }
+
+app.UseCors("AllowFrontend");
 
 if (app.Environment.IsDevelopment())
 {
