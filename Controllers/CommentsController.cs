@@ -133,6 +133,40 @@ namespace ForumWebAPI.Controllers
             });
         }
 
+        [HttpGet("author/{authorId}")]
+        [AllowAnonymous]
+        public ActionResult<PageResult<CommentDto>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
+        {
+            var query = _commentRepository.Get()
+                .Include(c => c.Post)
+                .Where(c => !c.IsDeleted && !c.Post.IsDeleted && c.AuthorId == authorId);
+
+            var total = query.Count();
+
+            var result = query
+                .OrderByDescending(c => c.CreationDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var comments = result.Select(c => new CommentDto
+            {
+                CommentId = c.CommentId,
+                PostId = c.PostId,
+                PostTitle = c.Post.Title,
+                AuthorId = c.AuthorId,
+                Content = c.Content,
+                CreationDate = c.CreationDate,
+                Rating = c.Rating,
+                IsDeleted = c.IsDeleted,
+                IsPinned = c.IsPinned,
+                ImageUrl = c.ImageUrl,
+                HasReplies = false
+            }).ToList();
+
+            return Ok(new PageResult<CommentDto> { Items = comments, TotalCount = total });
+        }
+
         [HttpGet("{id}", Name = "GetComment")]
         [AllowAnonymous]
         public IActionResult Get(int Id)
@@ -207,6 +241,7 @@ namespace ForumWebAPI.Controllers
         {
             public int CommentId { get; set; }
             public int PostId { get; set; }
+            public string? PostTitle { get; set; }
             public int AuthorId { get; set; }
             public string Content { get; set; } = "";
             public DateTime CreationDate { get; set; }

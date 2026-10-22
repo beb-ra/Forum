@@ -135,6 +135,25 @@ namespace ForumWebAPI.Controllers
             return Ok(new PageResult<Post> { Items = result, TotalCount = total });
         }
 
+        [HttpGet("author/{authorId}")]
+        [AllowAnonymous]
+        public ActionResult<PageResult<Post>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
+        {
+            var query = _postRepository.Get()
+                .Include(p => p.Images)
+                .Where(p => !p.IsDeleted && p.AuthorId == authorId);
+
+            var total = query.Count();
+
+            var result = query
+                .OrderByDescending(p => p.CreationDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return Ok(new PageResult<Post> { Items = result, TotalCount = total });
+        }
+
         [HttpGet("{id}", Name = "GetPost")]
         [AllowAnonymous]
         public IActionResult Get(int Id)
