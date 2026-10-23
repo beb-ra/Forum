@@ -158,7 +158,9 @@ namespace ForumWebAPI.Controllers
         [AllowAnonymous]
         public IActionResult Get(int Id)
         {
-            Post? post = _postRepository.Get(Id);
+            Post? post = _postRepository.Get()
+                .Include(p => p.Images)
+                .FirstOrDefault(p => p.PostId == Id);
 
             if (post == null)
             {
