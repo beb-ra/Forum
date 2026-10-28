@@ -134,11 +134,16 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
+        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, int? subforumId = null)
         {
             var query = _postRepository.Get()
                 .Include(p => p.Images)
                 .Where(p => !p.IsDeleted && p.AuthorId == authorId);
+
+            if (subforumId.HasValue)
+            {
+                query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
 
             var total = await query.CountAsync();
 
