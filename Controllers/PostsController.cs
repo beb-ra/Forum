@@ -14,6 +14,7 @@ using ForumWebAPI.Services;
 using Microsoft.Extensions.Hosting;
 using Azure.Core;
 using System.ComponentModel.DataAnnotations;
+using CloudinaryDotNet;
 
 namespace ForumWebAPI.Controllers
 {
@@ -102,7 +103,8 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet(Name = "GetAllPosts")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null)
+        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null,
+            string? search = null)
         {
             var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -113,6 +115,14 @@ namespace ForumWebAPI.Controllers
             if (subforumId.HasValue)
             {
                 query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = $"%{search.Trim()}%";
+                query = query.Where(p =>
+                    EF.Functions.ILike(p.Title, term) ||
+                    EF.Functions.ILike(p.Content, term));
             }
 
             var total = await query.CountAsync();
@@ -134,7 +144,8 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, int? subforumId = null)
+        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, 
+            int? subforumId = null, string? search = null)
         {
             var query = _postRepository.Get()
                 .Include(p => p.Images)
@@ -143,6 +154,14 @@ namespace ForumWebAPI.Controllers
             if (subforumId.HasValue)
             {
                 query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = $"%{search.Trim()}%";
+                query = query.Where(p =>
+                    EF.Functions.ILike(p.Title, term) ||
+                    EF.Functions.ILike(p.Content, term));
             }
 
             var total = await query.CountAsync();
