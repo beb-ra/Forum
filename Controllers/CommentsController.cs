@@ -78,78 +78,75 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet(Name = "GetAllComments")]
         [AllowAnonymous]
-        public ActionResult<PageResult<CommentDto>> Get(int postId, int? parentCommentId = null, int page = 1, int pageSize = 10)
+        public async Task<ActionResult<PageResult<CommentDto>>> Get(int postId, int? parentCommentId = null, int page = 1, int pageSize = 10)
         {
-            var allCommentsForPost = _commentRepository.Get()
-                .Where(c => c.PostId == postId)
-                .ToList();
+            var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-            var repliesStats = allCommentsForPost
-                .Where(c => c.ParentCommentId != null && !c.IsDeleted)
-                .GroupBy(c => c.ParentCommentId!.Value)
-                .ToDictionary(g => g.Key, g => new { Count = g.Count(), TotalRating = g.Sum(c => c.Rating) });
+            var query = _commentRepository.Get()
+                .Where(c => c.PostId == postId && c.ParentCommentId == parentCommentId);
 
-            double GetScore(Comment c)
+            var projected = query.Select(c => new
             {
-                var stats = repliesStats.GetValueOrDefault(c.CommentId);
-                return Comment.CalculateScore(
-                    c.Rating,
-                    stats?.Count ?? 0,
-                    stats?.TotalRating ?? 0,
-                    c.CreationDate, c.IsDeleted, c.IsPinned);
-            }
+                c.CommentId, c.PostId, c.AuthorId,
+                c.Content, c.CreationDate, c.Rating,
+                c.IsDeleted, c.IsPinned, c.ImageUrl,
+                ReplyCount = c.Replies.Count(r => !r.IsDeleted),
+                TotalRepliesRating = c.Replies.Where(r => !r.IsDeleted).Sum(r => (int?)r.Rating) ?? 0
+            })
+            .Where(x => !x.IsDeleted || x.ReplyCount > 0)
+            .OrderByDescending(x =>
+                Math.Log10(Math.Max(Math.Abs(x.Rating), 1)) +
+                ((x.CreationDate - epoch).TotalSeconds / 45000.0) +
+                (Math.Log10(x.ReplyCount + 1) * 1.25) +
+                (Math.Log10(Math.Max(Math.Abs(x.TotalRepliesRating), 1)) * 2) +
+                (x.IsDeleted ? -5 : 0) +
+                (x.IsPinned ? 100000 : 0)
+            );
 
-            var result = allCommentsForPost
-                .Where(c => c.ParentCommentId == parentCommentId)
-                .Where(c => !c.IsDeleted || repliesStats.ContainsKey(c.CommentId))
-                .OrderByDescending(GetScore)
-                .ToList();
+            var total = await projected.CountAsync();
 
             var pageItems = parentCommentId.HasValue
-                ? result
-                : result.Skip((page - 1) * pageSize).Take(pageSize);
+                ? await projected.ToListAsync()
+                : await projected
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize).ToListAsync();
 
-            CommentDto Map(Comment c)
+            var dtos = pageItems.Select(x => new CommentDto
             {
-                return new CommentDto
-                {
-                    CommentId = c.CommentId,
-                    PostId = c.PostId,
-                    AuthorId = c.AuthorId,
-                    Content = c.Content,
-                    CreationDate = c.CreationDate,
-                    Rating = c.Rating,
-                    IsDeleted = c.IsDeleted,
-                    IsPinned = c.IsPinned,
-                    HasReplies = repliesStats.ContainsKey(c.CommentId),
-                    ImageUrl = c.ImageUrl
-                };
-            }
+                CommentId = x.CommentId,
+                PostId = x.PostId,
+                AuthorId = x.AuthorId,
+                Content = x.Content,
+                CreationDate = x.CreationDate,
+                Rating = x.Rating,
+                IsDeleted = x.IsDeleted,
+                IsPinned = x.IsPinned,
+                HasReplies = x.ReplyCount > 0,
+                ImageUrl = x.ImageUrl
+            }).ToList();
 
             return Ok(new PageResult<CommentDto>
             {
-                Items = pageItems.Select(Map).ToList(),
-                TotalCount = result.Count
+                Items = dtos,
+                TotalCount = total
             });
         }
 
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
-        public ActionResult<PageResult<CommentDto>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
+        public async Task<ActionResult<PageResult<CommentDto>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
         {
             var query = _commentRepository.Get()
                 .Include(c => c.Post)
                 .Where(c => !c.IsDeleted && !c.Post.IsDeleted && c.AuthorId == authorId);
 
-            var total = query.Count();
+            var total = await query.CountAsync();
 
-            var result = query
+            var comments = await query
                 .OrderByDescending(c => c.CreationDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
-
-            var comments = result.Select(c => new CommentDto
+                .Select(c => new CommentDto
             {
                 CommentId = c.CommentId,
                 PostId = c.PostId,
@@ -162,7 +159,7 @@ namespace ForumWebAPI.Controllers
                 IsPinned = c.IsPinned,
                 ImageUrl = c.ImageUrl,
                 HasReplies = false
-            }).ToList();
+            }).ToListAsync();
 
             return Ok(new PageResult<CommentDto> { Items = comments, TotalCount = total });
         }

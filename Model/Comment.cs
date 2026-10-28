@@ -26,6 +26,7 @@ namespace ForumWebAPI.Model
         [JsonIgnore]
         public ICollection<Vote> Votes { get; set; } = new List<Vote>();
 
+        /*
         public static double CalculateScore(int commentRating, int replyCount, 
             int totalRepliesRating, DateTime creationDate, bool isDeleted, bool isPinned)
         {
@@ -44,5 +45,6 @@ namespace ForumWebAPI.Model
 
             return order + seconds / 45000.0 + replyBonus + discussionBonus + deletedBonus + pinnedBonus;
         }
+        */
     }
 }

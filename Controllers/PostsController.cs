@@ -102,8 +102,10 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet(Name = "GetAllPosts")]
         [AllowAnonymous]
-        public ActionResult<PageResult<Post>> Get(int page = 1, int pageSize = 10, int? subforumId = null)
+        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null)
         {
+            var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
             var query = _postRepository.Get()
                 .Include(p => p.Images)
                 .Where(p => !p.IsDeleted);
@@ -113,43 +115,38 @@ namespace ForumWebAPI.Controllers
                 query = query.Where(p => p.SubforumId == subforumId.Value);
             }
 
-            var total = query.Count();
+            var total = await query.CountAsync();
 
-            var commentsByPost = _commentRepository.Get()
-               .Where(c => !c.IsDeleted)
-               .GroupBy(c => c.PostId)
-               .ToDictionary(g => g.Key, g => g.Count());
-
-            var allPosts = query.ToList();
-
-            var result = allPosts.OrderByDescending(p => Post.CalculateScore(
-                p.Rating,
-                commentsByPost.GetValueOrDefault(p.PostId, 0),
-                p.CreationDate,
-                p.IsClosed,
-                p.IsPinned))
+            var result = await query
+                .OrderByDescending(p =>
+                    Math.Log10(Math.Max(Math.Abs(p.Rating), 1)) +
+                    ((p.CreationDate - epoch).TotalSeconds / 45000.0) +
+                    (Math.Log10(p.Comments.Count(c => !c.IsDeleted) + 1) * 1.2) +
+                    (p.IsClosed ? -10 : 0) +
+                    (p.IsPinned ? 100000 : 0)
+                )
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             return Ok(new PageResult<Post> { Items = result, TotalCount = total });
         }
 
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
-        public ActionResult<PageResult<Post>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
+        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5)
         {
             var query = _postRepository.Get()
                 .Include(p => p.Images)
                 .Where(p => !p.IsDeleted && p.AuthorId == authorId);
 
-            var total = query.Count();
+            var total = await query.CountAsync();
 
-            var result = query
+            var result = await query
                 .OrderByDescending(p => p.CreationDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToList();
+                .ToListAsync();
 
             return Ok(new PageResult<Post> { Items = result, TotalCount = total });
         }
