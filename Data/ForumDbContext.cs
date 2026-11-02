@@ -34,6 +34,8 @@ public class ForumDbContext : DbContext
             e.Property(x => x.PasswordHash).HasColumnName("password_hash").HasMaxLength(255).IsRequired();
             e.Property(x => x.RegistrationDate).HasColumnName("registration_date").HasDefaultValueSql("NOW()");
             e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+            e.Property(x => x.ImageUrl).HasColumnName("image_url");
+            e.Property(x => x.Description).HasColumnName("description");
         });
 
         mb.Entity<Subforum>(e =>

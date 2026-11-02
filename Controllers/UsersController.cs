@@ -77,7 +77,7 @@ namespace ForumWebAPI.Controllers
                 return NotFound();
             }
 
-            return Ok( new { user.UserId, user.Username, user.RegistrationDate });
+            return Ok( new { user.UserId, user.Username, user.RegistrationDate, user.ImageUrl, user.Description });
         }
 
         [HttpGet("me")]
@@ -87,7 +87,7 @@ namespace ForumWebAPI.Controllers
             if (user == null || user.IsDeleted) return NotFound();
 
             return Ok(new { user.UserId, user.Username, user.Email,
-                user.RegistrationDate });
+                user.RegistrationDate, user.ImageUrl, user.Description});
         }
 
         [HttpDelete("{id}")]
@@ -123,6 +123,12 @@ namespace ForumWebAPI.Controllers
 
             [Required]
             public string NewPassword { get; set; } = "";
+        }
+
+        public class UpdateProfileRequest
+        {
+            public string? ImageUrl { get; set; }
+            public string? Description { get; set; }
         }
 
         [HttpPut("me/email")]
@@ -168,6 +174,22 @@ namespace ForumWebAPI.Controllers
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
             _userRepository.Update(userId, user);
 
+            return NoContent();
+        }
+
+        [HttpPut("me/profile")]
+        public IActionResult UpdateProfile([FromBody] UpdateProfileRequest request)
+        {
+            if (request == null) return BadRequest();
+
+            var userId = User.GetUserId();
+            var user = _userRepository.Get(userId);
+            if (user == null) return NotFound();
+
+            if (request.ImageUrl != null) user.ImageUrl = request.ImageUrl.Trim();
+            if (request.Description != null) user.Description = request.Description.Trim();
+
+            _userRepository.Update(userId, user);
             return NoContent();
         }
     }
