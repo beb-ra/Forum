@@ -18,8 +18,21 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var dbHost = builder.Configuration["DbSettings:Host"];
+var dbPort = builder.Configuration["DbSettings:Port"];
+var dbName = builder.Configuration["DbSettings:Database"];
+var dbUser = builder.Configuration["DbSettings:Username"];
+var dbPass = builder.Configuration["DbSettings:Password"];
+
+var connectionString = $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
+
+var envConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrEmpty(envConnectionString))
+{
+    connectionString = envConnectionString;
+}
 builder.Services.AddDbContext<ForumDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddScoped(typeof(IRepository<>), typeof(EFRepository<>));
 builder.Services.AddScoped(typeof(ISoftDeleteRepository<>), typeof(EFSoftDeleteRepository<>));
