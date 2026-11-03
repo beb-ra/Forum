@@ -46,6 +46,7 @@ namespace ForumWebAPI.Controllers
             public string Title { get; set; } = string.Empty;
             [Required]
             public string Content { get; set; } = string.Empty;
+            public int? TagId { get; set; }
             public List<string> ImageUrls { get; set; } = new();
         }
 
@@ -73,6 +74,7 @@ namespace ForumWebAPI.Controllers
                 AuthorId = User.GetUserId(),
                 CreationDate = DateTime.UtcNow,
                 Rating = 0,
+                TagId = request.TagId,
                 IsPinned = false,
                 IsClosed = false,
                 IsDeleted = false
@@ -103,8 +105,8 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet(Name = "GetAllPosts")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null,
-            string? search = null)
+        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null, 
+            int? tagId = null, string? search = null)
         {
             var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -115,6 +117,11 @@ namespace ForumWebAPI.Controllers
             if (subforumId.HasValue)
             {
                 query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
+
+            if (tagId.HasValue)
+            {
+                query = query.Where(p => p.TagId == tagId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(search))
@@ -145,7 +152,7 @@ namespace ForumWebAPI.Controllers
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
         public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, 
-            int? subforumId = null, string? search = null)
+            int? subforumId = null, int? tagId = null, string? search = null)
         {
             var query = _postRepository.Get()
                 .Include(p => p.Images)
@@ -154,6 +161,10 @@ namespace ForumWebAPI.Controllers
             if (subforumId.HasValue)
             {
                 query = query.Where(p => p.SubforumId == subforumId.Value);
+            }
+            if (tagId.HasValue)
+            {
+                query = query.Where(p => p.TagId == tagId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(search))
