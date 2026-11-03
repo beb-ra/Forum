@@ -85,7 +85,6 @@ namespace ForumWebAPI.Migrations
                         .HasColumnName("author_id");
 
                     b.Property<string>("Content")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("content");
 
@@ -133,7 +132,10 @@ namespace ForumWebAPI.Migrations
 
                     b.HasIndex("PostId");
 
-                    b.ToTable("comments", (string)null);
+                    b.ToTable("comments", null, t =>
+                        {
+                            t.HasCheckConstraint("chk_comment_has_content", "content IS NOT NULL OR image_url IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("ForumWebAPI.Model.Post", b =>

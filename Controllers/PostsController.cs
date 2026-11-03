@@ -199,7 +199,10 @@ namespace ForumWebAPI.Controllers
                 return BadRequest();
             }
 
-            var post = _postRepository.Get(Id);
+            var post = _postRepository.Get()
+                .Include(p => p.Images)
+                .FirstOrDefault(p => p.PostId == Id);
+
             if (post == null)
             {
                 return NotFound();
@@ -210,6 +213,12 @@ namespace ForumWebAPI.Controllers
                 return StatusCode(403, "You are banned in this subforum.");
             }
 
+            var newContent = string.IsNullOrWhiteSpace(updatedPost.Content) ? null : updatedPost.Content.Trim();
+            if (newContent == null)
+            {
+                return BadRequest("Post must contain a text");
+            }
+
             var currentUserId = User.GetUserId();
             var isAuthor = post.AuthorId == currentUserId;
             var isModerator = User.IsModeratorOf(post.SubforumId);
@@ -217,8 +226,20 @@ namespace ForumWebAPI.Controllers
             if (!isAuthor && !isModerator)
                 return Forbid();
 
+            if (updatedPost.Images != null)
+            {
+                post.Images.Clear();
+
+                foreach (var img in updatedPost.Images)
+                {
+                    if (!string.IsNullOrWhiteSpace(img.ImageUrl))
+                    {
+                        post.Images.Add(new PostImage { ImageUrl = img.ImageUrl.Trim() });
+                    }
+                }
+            }
             if (!string.IsNullOrEmpty(updatedPost.Title?.Trim())) { post.Title = updatedPost.Title.Trim(); }
-            if (!string.IsNullOrEmpty(updatedPost.Content?.Trim())) { post.Content = updatedPost.Content.Trim(); }
+            post.Content = newContent;
             if (updatedPost.TagId != null) { post.TagId = updatedPost.TagId; }
             post.IsPinned = updatedPost.IsPinned;
             post.IsClosed = updatedPost.IsClosed;

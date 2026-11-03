@@ -42,9 +42,12 @@ namespace ForumWebAPI.Controllers
                 return BadRequest();
             }
 
-            if (string.IsNullOrEmpty(comment.Content?.Trim()))
+            var hasText = !string.IsNullOrWhiteSpace(comment.Content);
+            var hasImage = !string.IsNullOrWhiteSpace(comment.ImageUrl);
+
+            if (!hasText && !hasImage)
             {
-                return BadRequest("Content is required");
+                return BadRequest("Comment must contain either text or an image");
             }
 
             var post = _postRepository.Get(comment.PostId);
@@ -56,12 +59,12 @@ namespace ForumWebAPI.Controllers
             }
 
             comment.AuthorId = User.GetUserId();
-            comment.Content = comment.Content.Trim();
 
             comment.CreationDate = DateTime.UtcNow;
             comment.Rating = 0;
             comment.IsDeleted = false;
             comment.IsPinned = false;
+            comment.Content = comment.Content?.Trim();
             comment.ImageUrl = comment.ImageUrl?.Trim();
 
             try
@@ -205,7 +208,16 @@ namespace ForumWebAPI.Controllers
 
             if (!isAuthor && !isModerator) return Forbid();
 
-            if (!string.IsNullOrEmpty(updatedComment.Content?.Trim())) { comment.Content = updatedComment.Content.Trim(); }
+            var newContent = string.IsNullOrWhiteSpace(updatedComment.Content) ? null : updatedComment.Content.Trim();
+            var newImage = string.IsNullOrWhiteSpace(updatedComment.ImageUrl) ? null : updatedComment.ImageUrl.Trim();
+
+            if (newContent == null && newImage == null)
+            {
+                return BadRequest("Comment must contain a text or a image");
+            }
+
+            comment.Content = newContent;
+            comment.ImageUrl = newImage;
             comment.IsPinned = updatedComment.IsPinned;
 
             _commentRepository.Update(Id, comment);

@@ -103,7 +103,7 @@ public class ForumDbContext : DbContext
             e.ToTable("comments");
             e.HasKey(x => x.CommentId);
             e.Property(x => x.CommentId).HasColumnName("comment_id");
-            e.Property(x => x.Content).HasColumnName("content").IsRequired();
+            e.Property(x => x.Content).HasColumnName("content");
             e.Property(x => x.CreationDate).HasColumnName("creation_date").HasDefaultValueSql("NOW()");
             e.Property(x => x.AuthorId).HasColumnName("author_id").IsRequired();
             e.Property(x => x.PostId).HasColumnName("post_id").IsRequired();
@@ -119,6 +119,9 @@ public class ForumDbContext : DbContext
                 .HasForeignKey(x => x.PostId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.ParentComment).WithMany(c => c.Replies)
                 .HasForeignKey(x => x.ParentCommentId).OnDelete(DeleteBehavior.SetNull);
+
+            e.ToTable(t => t.HasCheckConstraint("chk_comment_has_content",
+                "content IS NOT NULL OR image_url IS NOT NULL"));
 
             e.HasIndex(x => x.PostId);
             e.HasIndex(x => x.AuthorId);

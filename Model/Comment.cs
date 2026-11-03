@@ -5,7 +5,7 @@ namespace ForumWebAPI.Model
     public class Comment : ISoftDelete
     {
         public int CommentId { get; set; }
-        public string Content { get; set; } = null!;
+        public string? Content { get; set; }
         public DateTime CreationDate { get; set; }
         public int AuthorId { get; set; }
         public int PostId { get; set; }
