@@ -48,10 +48,10 @@ namespace ForumWebAPI.Controllers
 
             var postsQuery = _postRepository.Get()
                 .Include(p => p.Images)
-                .Where(p => p.ModerationStatus == ModerationStatus.Pending);
+                .Where(p => p.ModerationStatus == ModerationStatus.Pending && !p.IsDeleted);
 
             var commentsQuery = _commentRepository.Get()
-                .Where(c => c.ModerationStatus == ModerationStatus.Pending);
+                .Where(c => c.ModerationStatus == ModerationStatus.Pending && !c.IsDeleted);
 
             if (!isAdmin)
             {
