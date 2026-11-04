@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ForumWebAPI.Services;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 //builder.Services.AddControllers();
@@ -39,6 +40,7 @@ builder.Services.AddScoped(typeof(ISoftDeleteRepository<>), typeof(EFSoftDeleteR
 builder.Services.AddScoped(typeof(IHardDeleteRepository<>), typeof(EFHardDeleteRepository<>));
 builder.Services.AddScoped<IBanService, BanService>();
 builder.Services.AddScoped<IImageService, ImageService>();
+builder.Services.AddScoped<IModerationService, ModerationService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -64,31 +66,16 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins("https://beb-ra.github.io")
-              .AllowAnyMethod()
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyMethod() 
               .AllowAnyHeader()
               .AllowCredentials();
     });
 });
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ForumDbContext>();
-    try
-    {
-        dbContext.Database.Migrate();
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine("Migration skipped (tables already exist): " + ex.Message);
-    }
-}
-
-app.UseCors("AllowFrontend");
 
 if (app.Environment.IsDevelopment())
 {
@@ -97,6 +84,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendPolicy");
 
 app.UseAuthentication();
 

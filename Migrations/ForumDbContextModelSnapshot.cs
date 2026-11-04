@@ -110,6 +110,12 @@ namespace ForumWebAPI.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_pinned");
 
+                    b.Property<int>("ModerationStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
                     b.Property<int?>("ParentCommentId")
                         .HasColumnType("integer")
                         .HasColumnName("parent_comment_id");
@@ -127,6 +133,8 @@ namespace ForumWebAPI.Migrations
                     b.HasKey("CommentId");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("ModerationStatus");
 
                     b.HasIndex("ParentCommentId");
 
@@ -180,6 +188,12 @@ namespace ForumWebAPI.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_pinned");
 
+                    b.Property<int>("ModerationStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
                     b.Property<int>("Rating")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -203,6 +217,8 @@ namespace ForumWebAPI.Migrations
                     b.HasKey("PostId");
 
                     b.HasIndex("AuthorId");
+
+                    b.HasIndex("ModerationStatus");
 
                     b.HasIndex("SubforumId");
 

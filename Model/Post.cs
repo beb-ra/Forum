@@ -17,6 +17,7 @@ namespace ForumWebAPI.Model
         public bool IsClosed { get; set; }
         public bool IsDeleted { get; set; }
         public ICollection<PostImage> Images { get; set; } = new List<PostImage>();
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
 
         [JsonIgnore]
         public Subforum Subforum { get; set; } = null!;

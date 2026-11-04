@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using ForumWebAPI.Extensions;
 using ForumWebAPI.Services;
 using Microsoft.Extensions.Hosting;
+using Azure.Core;
 
 namespace ForumWebAPI.Controllers
 {
@@ -23,15 +24,17 @@ namespace ForumWebAPI.Controllers
         private readonly ISoftDeleteRepository<Comment> _commentRepository;
         private readonly IRepository<Post> _postRepository;
         private readonly IBanService _banService;
+        private readonly IModerationService _moderationService;
 
         public CommentsController(
             ISoftDeleteRepository<Comment> commentRepository,
             IRepository<Post> postRepository,
-            IBanService banService)
+            IBanService banService, IModerationService moderationService)
         {
             _commentRepository = commentRepository;
             _postRepository = postRepository;
             _banService = banService;
+            _moderationService = moderationService;
         }
 
         [HttpPost]
@@ -66,6 +69,15 @@ namespace ForumWebAPI.Controllers
             comment.IsPinned = false;
             comment.Content = comment.Content?.Trim();
             comment.ImageUrl = comment.ImageUrl?.Trim();
+
+            if (User.IsModeratorOf(post.SubforumId))
+            {
+                comment.ModerationStatus = ModerationStatus.Approved;
+            }
+            else
+            {
+                comment.ModerationStatus = _moderationService.CheckContent(comment.Content, post.SubforumId, User.GetUserId());
+            }
 
             try
             {

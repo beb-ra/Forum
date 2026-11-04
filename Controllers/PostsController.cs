@@ -25,17 +25,17 @@ namespace ForumWebAPI.Controllers
     {
         private readonly ISoftDeleteRepository<Post> _postRepository;
         private readonly IBanService _banService;
-        private readonly IRepository<Comment> _commentRepository;
         private readonly IRepository<Subforum> _subforumRepository;
+        private readonly IModerationService _moderationService;
 
         public PostsController(ISoftDeleteRepository<Post> postRepository, 
-            IBanService banService, IRepository<Comment> commentRepository, 
-            IRepository<Subforum> subforumRepository)
+            IBanService banService, IRepository<Subforum> subforumRepository, 
+            IModerationService moderationService)
         {
             _postRepository = postRepository;
             _banService = banService;
-            _commentRepository = commentRepository;
             _subforumRepository = subforumRepository;
+            _moderationService = moderationService;
         }
 
         public class CreatePostRequest
@@ -77,7 +77,7 @@ namespace ForumWebAPI.Controllers
                 TagId = request.TagId,
                 IsPinned = false,
                 IsClosed = false,
-                IsDeleted = false
+                IsDeleted = false,
             };
 
             if (request.ImageUrls != null)
@@ -89,6 +89,15 @@ namespace ForumWebAPI.Controllers
                         post.Images.Add(new PostImage { ImageUrl = url.Trim() });
                     }
                 }
+            }
+
+            if (User.IsModeratorOf(request.SubforumId))
+            {
+                post.ModerationStatus = ModerationStatus.Approved;
+            }
+            else
+            {
+                post.ModerationStatus = _moderationService.CheckContent(request.Content, request.SubforumId, User.GetUserId());
             }
 
             try

@@ -14,6 +14,7 @@ namespace ForumWebAPI.Model
         public int Rating { get; set; }
         public bool IsPinned { get; set; }
         public string? ImageUrl { get; set; }
+        public ModerationStatus ModerationStatus { get; set; } = ModerationStatus.Pending;
 
         [JsonIgnore]
         public User Author { get; set; } = null!;

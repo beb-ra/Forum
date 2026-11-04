@@ -81,6 +81,7 @@ public class ForumDbContext : DbContext
             e.Property(x => x.IsPinned).HasColumnName("is_pinned").HasDefaultValue(false);
             e.Property(x => x.IsClosed).HasColumnName("is_closed").HasDefaultValue(false);
             e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+            e.Property(x => x.ModerationStatus).HasColumnName("status").HasDefaultValue(ModerationStatus.Pending);
 
             e.HasOne(x => x.Subforum).WithMany(s => s.Posts)
                 .HasForeignKey(x => x.SubforumId).OnDelete(DeleteBehavior.Restrict);
@@ -92,6 +93,8 @@ public class ForumDbContext : DbContext
             e.HasIndex(x => x.SubforumId);
             e.HasIndex(x => x.AuthorId);
             e.HasIndex(x => x.TagId);
+            e.HasIndex(x => x.ModerationStatus);
+
             e.HasMany(p => p.Images)
             .WithOne(i => i.Post)
             .HasForeignKey(i => i.PostId)
@@ -112,6 +115,7 @@ public class ForumDbContext : DbContext
             e.Property(x => x.Rating).HasColumnName("rating").HasDefaultValue(0);
             e.Property(x => x.IsPinned).HasColumnName("is_pinned").HasDefaultValue(false);
             e.Property(x => x.ImageUrl).HasColumnName("image_url");
+            e.Property(x => x.ModerationStatus).HasColumnName("status").HasDefaultValue(ModerationStatus.Pending);
 
             e.HasOne(x => x.Author).WithMany(u => u.Comments)
                 .HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
@@ -126,6 +130,7 @@ public class ForumDbContext : DbContext
             e.HasIndex(x => x.PostId);
             e.HasIndex(x => x.AuthorId);
             e.HasIndex(x => x.ParentCommentId);
+            e.HasIndex(x => x.ModerationStatus);
         });
 
         mb.Entity<Vote>(e =>
