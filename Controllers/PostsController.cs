@@ -128,7 +128,7 @@ namespace ForumWebAPI.Controllers
 
         [HttpGet(Name = "GetAllPosts")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> Get(int page = 1, int pageSize = 10, int? subforumId = null, 
+        public async Task<ActionResult<PageResult<PostDto>>> Get(int page = 1, int pageSize = 10, int? subforumId = null, 
             int? tagId = null, string? search = null)
         {
             var epoch = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -167,14 +167,29 @@ namespace ForumWebAPI.Controllers
                 )
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(p => new PostDto
+                {
+                    PostId = p.PostId,
+                    SubforumId = p.SubforumId,
+                    Title = p.Title,
+                    Content = p.Content,
+                    CreationDate = p.CreationDate,
+                    AuthorId = p.AuthorId,
+                    Rating = p.Rating,
+                    TagId = p.TagId,
+                    IsPinned = p.IsPinned,
+                    IsClosed = p.IsClosed,
+                    Images = p.Images.ToList(),
+                    CommentCount = p.Comments.Count(c => !c.IsDeleted)
+                })
                 .ToListAsync();
 
-            return Ok(new PageResult<Post> { Items = result, TotalCount = total });
+            return Ok(new PageResult<PostDto> { Items = result, TotalCount = total });
         }
 
         [HttpGet("author/{authorId}")]
         [AllowAnonymous]
-        public async Task<ActionResult<PageResult<Post>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, 
+        public async Task<ActionResult<PageResult<PostDto>>> GetByAuthor(int authorId, int page = 1, int pageSize = 5, 
             int? subforumId = null, int? tagId = null, string? search = null)
         {
             var query = _postRepository.Get()
@@ -204,9 +219,24 @@ namespace ForumWebAPI.Controllers
                 .OrderByDescending(p => p.CreationDate)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(p => new PostDto
+                {
+                    PostId = p.PostId,
+                    SubforumId = p.SubforumId,
+                    Title = p.Title,
+                    Content = p.Content,
+                    CreationDate = p.CreationDate,
+                    AuthorId = p.AuthorId,
+                    Rating = p.Rating,
+                    TagId = p.TagId,
+                    IsPinned = p.IsPinned,
+                    IsClosed = p.IsClosed,
+                    Images = p.Images.ToList(),
+                    CommentCount = p.Comments.Count(c => !c.IsDeleted)
+                })
                 .ToListAsync();
 
-            return Ok(new PageResult<Post> { Items = result, TotalCount = total });
+            return Ok(new PageResult<PostDto> { Items = result, TotalCount = total });
         }
 
         [HttpGet("{id}", Name = "GetPost")]
@@ -299,6 +329,23 @@ namespace ForumWebAPI.Controllers
 
             _postRepository.Delete(Id);
             return NoContent();
+        }
+
+        public class PostDto
+        {
+            public int PostId { get; set; }
+            public int SubforumId { get; set; }
+            public string Title { get; set; } = string.Empty;
+            public string Content { get; set; } = string.Empty;
+            public DateTime CreationDate { get; set; }
+            public int AuthorId { get; set; }
+            public int Rating { get; set; }
+            public int? TagId { get; set; }
+            public bool IsPinned { get; set; }
+            public bool IsClosed { get; set; }
+            public ModerationStatus ModerationStatus { get; set; }
+            public List<PostImage> Images { get; set; } = new();
+            public int CommentCount { get; set; }
         }
     }
 }
