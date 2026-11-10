@@ -13,6 +13,7 @@ using ForumWebAPI.Extensions;
 using ForumWebAPI.Services;
 using Microsoft.Extensions.Hosting;
 using Azure.Core;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ForumWebAPI.Controllers
 {
@@ -38,6 +39,7 @@ namespace ForumWebAPI.Controllers
         }
 
         [HttpPost]
+        [EnableRateLimiting("comments-spam-protection")]
         public IActionResult Create([FromBody] Comment comment)
         {
             if (comment == null)
@@ -61,8 +63,19 @@ namespace ForumWebAPI.Controllers
                 return StatusCode(403, "You are banned in this subforum");
             }
 
-            comment.AuthorId = User.GetUserId();
+            var userId = User.GetUserId();
 
+            var isDuplicate = _commentRepository.Get()
+                .Any(c => c.AuthorId == userId
+               && c.Content == comment.Content.Trim()
+               && c.CreationDate > DateTime.UtcNow.AddSeconds(-10));
+
+            if (isDuplicate)
+            {
+                return BadRequest("Please wait or send a different message");
+            }
+
+            comment.AuthorId = userId;
             comment.CreationDate = DateTime.UtcNow;
             comment.Rating = 0;
             comment.IsDeleted = false;

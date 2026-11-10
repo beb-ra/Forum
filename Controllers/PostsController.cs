@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Azure.Core;
 using System.ComponentModel.DataAnnotations;
 using CloudinaryDotNet;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace ForumWebAPI.Controllers
 {
@@ -51,6 +52,7 @@ namespace ForumWebAPI.Controllers
         }
 
         [HttpPost]
+        [EnableRateLimiting("posts-spam-protection")]
         public IActionResult Create([FromBody] CreatePostRequest request)
         {
             if (request == null)
@@ -58,7 +60,9 @@ namespace ForumWebAPI.Controllers
                 return BadRequest();
             }
 
-            if (_banService.IsBanned(User.GetUserId(), request.SubforumId))
+            var userId = User.GetUserId();
+
+            if (_banService.IsBanned(userId, request.SubforumId))
             {
                 return StatusCode(403, "You are banned in this subforum");
             }
@@ -66,12 +70,22 @@ namespace ForumWebAPI.Controllers
             var subforum = _subforumRepository.Get(request.SubforumId);
             if (subforum == null) return NotFound("Subforum not found");
 
+            var isDuplicate = _postRepository.Get()
+                .Any(c => c.AuthorId == userId
+               && c.Content == request.Content.Trim()
+               && c.CreationDate > DateTime.UtcNow.AddSeconds(-10));
+
+            if (isDuplicate)
+            {
+                return BadRequest();
+            }
+
             var post = new Post
             {
                 SubforumId = request.SubforumId,
                 Title = request.Title.Trim(),
                 Content = request.Content.Trim(),
-                AuthorId = User.GetUserId(),
+                AuthorId = userId,
                 CreationDate = DateTime.UtcNow,
                 Rating = 0,
                 TagId = request.TagId,
