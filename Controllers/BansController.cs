@@ -66,9 +66,16 @@ namespace ForumWebAPI.Controllers
         [HttpGet(Name = "GetAllBans")]
         public ActionResult<IEnumerable<Ban>> Get()
         {
-            if (!User.IsGlobalAdmin()) return Forbid();
-            var bans = _banRepository.Get();
-            return Ok(bans);
+            var bans = _banRepository.Get().ToList();
+
+            if (User.IsGlobalAdmin())
+                return Ok(bans);
+
+            var moderatedBans = bans.Where(b =>
+                b.SubforumId != null && User.IsModeratorOf(b.SubforumId.Value))
+                .ToList();
+
+            return Ok(moderatedBans);
         }
 
         [HttpGet("{id}", Name = "GetBan")]

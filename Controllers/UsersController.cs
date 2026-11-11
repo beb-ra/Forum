@@ -131,6 +131,11 @@ namespace ForumWebAPI.Controllers
             public string? Description { get; set; }
         }
 
+        public class UpdateUserName
+        {
+            public string NewName { get; set; } = "";
+        }
+
         [HttpPut("me/email")]
         public IActionResult ChangeEmail([FromBody] ChangeEmailRequest request)
         {
@@ -188,6 +193,27 @@ namespace ForumWebAPI.Controllers
 
             if (request.ImageUrl != null) user.ImageUrl = request.ImageUrl.Trim();
             if (request.Description != null) user.Description = request.Description.Trim();
+
+            _userRepository.Update(userId, user);
+            return NoContent();
+        }
+
+        [HttpPut("me/name")]
+        public IActionResult UpdateName([FromBody] UpdateUserName request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.NewName))
+                return BadRequest("Username can't be empty");
+
+            if (request.NewName.Length > 15)
+            {
+                return BadRequest("Username too long");
+            }
+
+            var userId = User.GetUserId();
+            var user = _userRepository.Get(userId);
+            if (user == null) return NotFound();
+
+            if (request.NewName != null) user.Username = request.NewName.Trim();
 
             _userRepository.Update(userId, user);
             return NoContent();

@@ -68,6 +68,11 @@ namespace ForumWebAPI.Controllers
                 return Conflict("Email is already in use");
             }
 
+            if (request.Username.Length > 15)
+            {
+                return BadRequest("Username too long");
+            }
+
             var user = new User
             {
                 Username = request.Username.Trim(),
