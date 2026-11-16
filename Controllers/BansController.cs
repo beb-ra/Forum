@@ -146,5 +146,13 @@ namespace ForumWebAPI.Controllers
 
             return Ok(deletedBan);
         }
+
+        [HttpGet("me")]
+        public ActionResult<IEnumerable<Ban>> GetMyBans()
+        {
+            var userId = User.GetUserId();
+            var myBans = _banRepository.Get().Where(b => b.UserId == userId).ToList();
+            return Ok(myBans);
+        }
     }
 }
