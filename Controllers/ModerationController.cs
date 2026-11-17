@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using static ForumWebAPI.Controllers.CommentsController;
+using static ForumWebAPI.Controllers.PostsController;
 
 namespace ForumWebAPI.Controllers
 {
@@ -169,6 +170,88 @@ namespace ForumWebAPI.Controllers
                 .ToList();
 
             return Ok(users);
+        }
+
+        [HttpGet("deleted")]
+        public async Task<IActionResult> GetDeleted()
+        {
+            var claims = User.FindAll("SubforumRole").Select(c => c.Value).ToList();
+            bool isAdmin = claims.Contains("global:Admin");
+
+            var moderatedSubforums = claims
+                .Where(r => r.EndsWith(":Moderator"))
+                .Select(r => r.Split(':')[0])
+                .Where(idStr => int.TryParse(idStr, out _))
+                .Select(int.Parse)
+                .ToList();
+
+            if (!isAdmin && moderatedSubforums.Count == 0)
+                return Forbid();
+
+            var postsQuery = _postRepository.Get()
+                .Include(p => p.Images)
+                .Where(p => p.IsDeleted);
+
+            var commentsQuery = _commentRepository.Get()
+                .Where(c => c.IsDeleted);
+
+            if (!isAdmin)
+            {
+                postsQuery = postsQuery.Where(p => moderatedSubforums.Contains(p.SubforumId));
+                commentsQuery = commentsQuery.Where(c => moderatedSubforums.Contains(c.Post.SubforumId));
+            }
+
+            var posts = await postsQuery.ToListAsync();
+
+            var comments = await commentsQuery
+                .Select(c => new CommentDto
+                {
+                    CommentId = c.CommentId,
+                    PostId = c.PostId,
+                    PostTitle = c.Post.Title,
+                    AuthorId = c.AuthorId,
+                    Content = c.Content,
+                    CreationDate = c.CreationDate,
+                    Rating = c.Rating,
+                    IsDeleted = c.IsDeleted,
+                    IsPinned = c.IsPinned,
+                    ImageUrl = c.ImageUrl,
+                    HasReplies = false
+                })
+                .ToListAsync();
+
+            return Ok(new { Posts = posts, Comments = comments });
+        }
+
+        [HttpPut("posts/{id}/restore")]
+        public IActionResult RestorePost(int id)
+        {
+            var post = _postRepository.Get(id);
+            if (post == null) return NotFound();
+
+            if (!User.IsModeratorOf(post.SubforumId)) return Forbid();
+
+            post.IsDeleted = false;
+            post.ModerationStatus = ModerationStatus.Approved;
+            _postRepository.Update(id, post);
+            return NoContent();
+        }
+
+        [HttpPut("comments/{id}/restore")]
+        public IActionResult RestoreComment(int id)
+        {
+            var comment = _commentRepository.Get(id);
+            if (comment == null) return NotFound();
+
+            var post = _postRepository.Get(comment.PostId);
+            if (post == null) return NotFound();
+
+            if (!User.IsModeratorOf(post.SubforumId)) return Forbid();
+
+            comment.IsDeleted = false;
+            comment.ModerationStatus = ModerationStatus.Approved;
+            _commentRepository.Update(id, comment);
+            return NoContent();
         }
     }
 }
