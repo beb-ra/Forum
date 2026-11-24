@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Xml.Linq;
 
@@ -16,6 +17,7 @@ namespace ForumWebAPI.Model
         public bool IsDeleted { get; set; }
         public string? ImageUrl { get; set; }
         public string? Description { get; set; }
+        public DateTime LastActivity { get; set; }
 
         [JsonIgnore]
         public ICollection<Post> Posts { get; set; } = new List<Post>();

@@ -26,38 +26,6 @@ namespace ForumWebAPI.Controllers
             _userRepository = userRepository;
         }
 
-        /*
-        [HttpPost]
-        public IActionResult Create([FromBody] User user)
-        {
-            if (!User.IsGlobalAdmin())
-                return Forbid();
-            if (user == null)
-            {
-                return BadRequest();
-            }
-
-            if (string.IsNullOrEmpty(user.Username?.Trim()) || string.IsNullOrEmpty(user.Email?.Trim()))
-            {
-                return BadRequest("Username and Email are required.");
-            }
-
-            var existingUser = _userRepository.Get()
-                .FirstOrDefault(u => u.Email == user.Email.Trim());
-            if (existingUser != null)
-            {
-                return Conflict("A user with this email already exists");
-            }
-
-            user.Username = user.Username.Trim();
-            user.Email = user.Email.Trim();
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.PasswordHash.Trim());
-
-            _userRepository.Create(user);
-            return CreatedAtRoute("GetUser", new { id = user.UserId }, user);
-        }
-        */
-
         [HttpGet(Name = "GetAllUsers")]
         public ActionResult<IEnumerable<User>> Get()
         {
@@ -77,7 +45,7 @@ namespace ForumWebAPI.Controllers
                 return NotFound();
             }
 
-            return Ok( new { user.UserId, user.Username, user.RegistrationDate, user.ImageUrl, user.Description });
+            return Ok( new { user.UserId, user.Username, user.RegistrationDate, user.ImageUrl, user.Description, user.LastActivity });
         }
 
         [HttpGet("me")]
@@ -87,7 +55,7 @@ namespace ForumWebAPI.Controllers
             if (user == null || user.IsDeleted) return NotFound();
 
             return Ok(new { user.UserId, user.Username, user.Email,
-                user.RegistrationDate, user.ImageUrl, user.Description});
+                user.RegistrationDate, user.ImageUrl, user.Description, user.LastActivity});
         }
 
         [HttpDelete("{id}")]
@@ -216,6 +184,22 @@ namespace ForumWebAPI.Controllers
             if (request.NewName != null) user.Username = request.NewName.Trim();
 
             _userRepository.Update(userId, user);
+            return NoContent();
+        }
+
+        [HttpPut("me/activity")]
+        public IActionResult UpdateActivity()
+        {
+            var userId = User.GetUserId();
+            var user = _userRepository.Get(userId);
+            if (user == null || user.IsDeleted) return NotFound();
+
+            if (user.LastActivity == null || (DateTime.UtcNow - user.LastActivity).TotalMinutes >= 1)
+            {
+                user.LastActivity = DateTime.UtcNow;
+                _userRepository.Update(userId, user);
+            }
+
             return NoContent();
         }
     }

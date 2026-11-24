@@ -37,6 +37,7 @@ public class ForumDbContext : DbContext
             e.Property(x => x.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
             e.Property(x => x.ImageUrl).HasColumnName("image_url");
             e.Property(x => x.Description).HasColumnName("description");
+            e.Property(x => x.LastActivity).HasColumnName("last_activity").HasDefaultValueSql("NOW()");
         });
 
         mb.Entity<Subforum>(e =>
