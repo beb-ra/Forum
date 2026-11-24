@@ -26,21 +26,26 @@ namespace ForumWebAPI.Controllers
         private readonly IRepository<Post> _postRepository;
         private readonly IBanService _banService;
         private readonly IModerationService _moderationService;
+        private readonly IHardDeleteRepository<Notification> _notificationRepository;
+        private readonly IRepository<User> _userRepository;
 
         public CommentsController(
             ISoftDeleteRepository<Comment> commentRepository,
-            IRepository<Post> postRepository,
-            IBanService banService, IModerationService moderationService)
+            IRepository<Post> postRepository, IBanService banService, 
+            IModerationService moderationService,
+            IHardDeleteRepository<Notification> notificationRepository, IRepository<User> userRepository)
         {
             _commentRepository = commentRepository;
             _postRepository = postRepository;
             _banService = banService;
             _moderationService = moderationService;
+            _notificationRepository = notificationRepository;
+            _userRepository = userRepository;
         }
 
         [HttpPost]
         [EnableRateLimiting("comments-spam-protection")]
-        public IActionResult Create([FromBody] Comment comment)
+        public async Task<IActionResult> Create([FromBody] Comment comment)
         {
             if (comment == null)
             {
@@ -100,6 +105,8 @@ namespace ForumWebAPI.Controllers
             {
                 return BadRequest("Invalid PostId, AuthorId or ParentCommentId");
             }
+
+            await CreateCommentNotifications(comment, post);
 
             return CreatedAtRoute("GetComment", new { id = comment.CommentId }, comment);
         }
@@ -267,6 +274,13 @@ namespace ForumWebAPI.Controllers
             if (comment.AuthorId != currentUserId && !User.IsModeratorOf(post.SubforumId))
                 return Forbid();
 
+            var notificationsToDelete = _notificationRepository.Get()
+                .Where(n => n.CommentId == Id).ToList();
+            foreach (var n in notificationsToDelete)
+            {
+                _notificationRepository.Delete(n.Id);
+            }
+
             _commentRepository.Delete(Id);
             return NoContent();
         }
@@ -285,5 +299,43 @@ namespace ForumWebAPI.Controllers
             public bool HasReplies { get; set; }
             public string? ImageUrl { get; set; }
         }
+
+        private async Task CreateCommentNotifications(Comment comment, Post post)
+        {
+            if (comment.ParentCommentId != null)
+            {
+                var parentComment = _commentRepository.Get(comment.ParentCommentId.Value);
+                if (parentComment != null && parentComment.AuthorId != comment.AuthorId)
+                {
+                    _notificationRepository.Create(new Notification
+                    {
+                        UserId = parentComment.AuthorId,
+                        SenderId = comment.AuthorId,
+                        Type = NotificationType.ReplyToComment,
+                        Message = $"ответил(а) на ваш комментарий: \"{Truncate(comment.Content, 30)}\"",
+                        CommentId = comment.CommentId,
+                        PostId = post.PostId
+                    });
+                }
+            }
+            else
+            {
+                if (post.AuthorId != comment.AuthorId)
+                {
+                    _notificationRepository.Create(new Notification
+                    {
+                        UserId = post.AuthorId,
+                        SenderId = comment.AuthorId,
+                        Type = NotificationType.CommentOnPost,
+                        Message = $"оставил(а) комментарий под вашим постом: \"{Truncate(post.Title, 30)}\"",
+                        CommentId = comment.CommentId,
+                        PostId = post.PostId
+                    });
+                }
+            }
+        }
+
+        private string Truncate(string text, int length)
+            => text.Length <= length ? text : text.Substring(0, length) + "...";
     }
 }

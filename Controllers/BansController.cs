@@ -20,10 +20,15 @@ namespace ForumWebAPI.Controllers
     public class BansController : ControllerBase
     {
         private readonly IHardDeleteRepository<Ban> _banRepository;
+        private readonly IHardDeleteRepository<Notification> _notificationRepository;
+        private readonly IRepository<Subforum> _subforumRepository;
 
-        public BansController(IHardDeleteRepository<Ban> banRepository)
+        public BansController(IHardDeleteRepository<Ban> banRepository, IHardDeleteRepository<Notification> notificationRepository,
+            IRepository<Subforum> subforumRepository)
         {
             _banRepository = banRepository;
+            _notificationRepository = notificationRepository;
+            _subforumRepository = subforumRepository;
         }
 
         [HttpPost]
@@ -59,6 +64,28 @@ namespace ForumWebAPI.Controllers
             {
                 return BadRequest("Invalid UserId, SubforumId or BannedBy");
             }
+
+            string message = string.Empty;
+            if (ban.SubforumId == null)
+            {
+                message = $"Вы получили бан на форуме. Причина: {ban.BanReason}";
+            } else
+            {
+                var subforum = _subforumRepository.Get(ban.SubforumId.Value);
+                var subforumName = subforum != null ? subforum.Name : $"подфоруме {ban.SubforumId}";
+
+                message = $"Вы получили бан в «{subforumName}». Причина: {ban.BanReason}";
+            }
+
+            _notificationRepository.Create(new Notification
+            {
+                UserId = ban.UserId,
+                SenderId = null,
+                Type = NotificationType.BanReceived,
+                Message = message,
+                CommentId = null,
+                BanId = ban.BanId
+            });
 
             return CreatedAtRoute("GetBan", new { id = ban.BanId }, ban);
         }
@@ -127,7 +154,7 @@ namespace ForumWebAPI.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int Id)
         {
-            var deletedBan = _banRepository.Delete(Id);
+            var deletedBan = _banRepository.Get(Id);
 
             if (deletedBan == null)
             {
@@ -143,6 +170,14 @@ namespace ForumWebAPI.Controllers
                 if (!User.IsModeratorOf(deletedBan.SubforumId.Value)) return Forbid();
             }
 
+            var banNotifs = _notificationRepository.Get()
+                .Where(n => n.BanId == Id).ToList();
+            foreach (var n in banNotifs)
+            {
+                _notificationRepository.Delete(n.Id);
+            }
+
+            _banRepository.Delete(Id);
 
             return Ok(deletedBan);
         }

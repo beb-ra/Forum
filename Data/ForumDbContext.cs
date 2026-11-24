@@ -20,6 +20,7 @@ public class ForumDbContext : DbContext
     public DbSet<Ban> Bans => Set<Ban>();
     public DbSet<SubforumRole> SubforumRoles => Set<SubforumRole>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -226,6 +227,29 @@ public class ForumDbContext : DbContext
              .WithMany(p => p.Images)
              .HasForeignKey(x => x.PostId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        mb.Entity<Notification>(e =>
+        {
+            e.ToTable("notifications");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id").IsRequired();
+            e.Property(x => x.SenderId).HasColumnName("sender_id");
+            e.Property(x => x.Type).HasColumnName("type").IsRequired();
+            e.Property(x => x.Message).HasColumnName("message").IsRequired();
+            e.Property(x => x.CommentId).HasColumnName("comment_id");
+            e.Property(x => x.BanId).HasColumnName("ban_id");
+            e.Property(x => x.PostId).HasColumnName("post_id");
+            e.Property(x => x.IsRead).HasColumnName("is_read").HasDefaultValue(false);
+            e.Property(x => x.CreationDate).HasColumnName("creation_date").HasDefaultValueSql("NOW()");
+
+            e.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.UserId);
         });
     }
 }
