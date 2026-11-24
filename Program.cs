@@ -111,6 +111,19 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ForumDbContext>();
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("MIGRATION ERROR: " + ex.Message);
+    }
+}
+
 app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
