@@ -327,7 +327,7 @@ namespace ForumWebAPI.Controllers
                         UserId = post.AuthorId,
                         SenderId = comment.AuthorId,
                         Type = NotificationType.CommentOnPost,
-                        Message = $"оставил(а) комментарий под вашим постом: \"{Truncate(post.Title, 30)}\"",
+                        Message = $"оставил(а) комментарий под вашим постом: \"{Truncate(comment.Content, 30)}\"",
                         CommentId = comment.CommentId,
                         PostId = post.PostId
                     });
