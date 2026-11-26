@@ -11,6 +11,8 @@ using ForumWebAPI.Data.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using ForumWebAPI.Extensions;
 using System.ComponentModel.DataAnnotations;
+using static ForumWebAPI.Controllers.PostsController;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace ForumWebAPI.Controllers
 {
@@ -26,12 +28,40 @@ namespace ForumWebAPI.Controllers
             _userRepository = userRepository;
         }
 
-        [HttpGet(Name = "GetAllUsers")]
+        [HttpGet("all", Name = "GetAllUsers")]
         public ActionResult<IEnumerable<User>> Get()
         {
             if (!User.IsGlobalAdmin()) return Forbid();
             var users = _userRepository.Get();
             return Ok(users);
+        }
+
+        [HttpGet(Name = "GetUsers")]
+        public async Task<ActionResult<PageResult<UserDto>>> Get(int page = 1, int pageSize = 10, string? search = null)
+        {
+            var query = _userRepository.Get()
+                .Where(u => !u.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = $"%{search.Trim()}%";
+                query = query.Where(u =>
+                    EF.Functions.ILike(u.Username, term));
+            }
+
+            var total = await query.CountAsync();
+
+            var result = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new UserDto
+                {
+                    UserId = u.UserId,
+                    Username = u.Username,
+                    ImageUrl = u.ImageUrl
+                }).ToListAsync();
+
+            return Ok( new PageResult<UserDto> { Items = result, TotalCount = total });
         }
 
         [HttpGet("{id}", Name = "GetUser")]
@@ -201,6 +231,13 @@ namespace ForumWebAPI.Controllers
             }
 
             return NoContent();
+        }
+
+        public class UserDto
+        {
+            public int UserId { get; set; }
+            public string Username { get; set; } = null!;
+            public string? ImageUrl { get; set; }
         }
     }
 }
